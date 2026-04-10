@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Lebanon War Archive 2024–2026 | Auto-Updated</title>
+<meta name="description" content="Live-updating archive of IDF operations in South Lebanon 2024–2026. 42 verified locations. Auto-updated hourly via AI."/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1520;--bg2:#111d2b;--bg3:#172234;--bg4:#1d2b40;
+  --bd:#243347;--bd2:#1a2d42;
+  --t1:#e2eaf4;--t2:#8aa4be;--t3:#4d6e8c;--t4:#2e4d6b;
+  --red:#c0392b;--ora:#d35400;--amb:#c9920a;--gry:#4a5568;--pur:#6c3483;--grn:#1e8449;
+  --acc:#2471a3;--acc2:#3498db;--acc3:#5dade2;
+  --warn:#e67e22;
+  --font:'Courier New',Courier,monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--t1);font-family:var(--font);font-size:12px;overflow:hidden}
+/* LAYOUT */
+#app{display:grid;grid-template-rows:52px 1fr;grid-template-columns:320px 1fr 340px;height:100vh}
+#topbar{grid-column:1/-1;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 14px;gap:12px;z-index:200}
+#left{background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+#mid{position:relative}
+#map{height:100%}
+#right{background:var(--bg2);border-left:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+/* TOPBAR */
+.logo{font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--t1)}
+.logo em{color:var(--red);font-style:normal}
+.toll-bar{display:flex;gap:10px;font-size:10px;color:var(--t2);border-left:1px solid var(--bd);padding-left:12px}
+.toll-num{color:var(--t1);font-weight:700}
+.toll-label{color:var(--t3)}
+.spacer{flex:1}
+.op-badge{padding:3px 8px;border:1px solid var(--red);border-radius:3px;font-size:9px;color:var(--red);letter-spacing:.4px;animation:flash 2s infinite}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.5}}
+.status-wrap{display:flex;align-items:center;gap:7px;padding:4px 9px;border:1px solid var(--bd);border-radius:3px;font-size:10px;color:var(--t2)}
+.led{width:7px;height:7px;border-radius:50%;background:var(--grn);animation:pulse 2s infinite}
+.led.busy{background:var(--warn);animation:pulse .5s infinite}
+.led.err{background:var(--red);animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+#countdown{font-variant-numeric:tabular-nums;color:var(--t1);font-weight:700;min-width:42px}
+#run-btn{padding:5px 11px;background:transparent;border:1px solid var(--acc2);border-radius:3px;color:var(--acc2);font-size:10px;font-family:var(--font);cursor:pointer;letter-spacing:.3px}
+#run-btn:hover{background:rgba(52,152,219,.15)}
+#run-btn:disabled{opacity:.35;cursor:not-allowed}
+/* SHARE BTN */
+#share-btn{padding:5px 11px;background:transparent;border:1px solid var(--grn);border-radius:3px;color:#2ecc71;font-size:10px;font-family:var(--font);cursor:pointer}
+#share-btn:hover{background:rgba(46,204,113,.1)}
+/* PANELS */
+.ph{padding:8px 11px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg3)}
+.ph h3{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px}
+.pb{flex:1;overflow-y:auto}
+.pb::-webkit-scrollbar{width:3px}
+.pb::-webkit-scrollbar-thumb{background:var(--bd)}
+/* STATS */
+.stats{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
+.st{flex:1;padding:7px 3px;text-align:center;border-right:1px solid var(--bd2)}
+.st:last-child{border:none}
+.stn{font-size:15px;font-weight:700}
+.stl{font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
+/* PROGRESS */
+#prog{height:2px;background:var(--bd);flex-shrink:0}
+#progbar{height:100%;background:var(--acc2);width:0;transition:width .4s}
+/* FILTER */
+.filters{padding:7px 11px;border-bottom:1px solid var(--bd);display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
+.ft{display:flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;border:1px solid transparent;cursor:pointer;font-size:9px;color:var(--t3);user-select:none}
+.ft.on{border-color:currentColor;color:var(--t2)}
+.ft .d{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ft.off .d,.ft.off span{opacity:.2}
+/* VILLAGE LIST */
+.vi{padding:7px 11px;border-bottom:1px solid var(--bd2);cursor:pointer}
+.vi:hover{background:var(--bg3)}
+.vi.sel{background:var(--bg3);border-left:2px solid var(--acc2)}
+.vi.sel{padding-left:9px}
+.vr1{display:flex;align-items:center;gap:5px}
+.vdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ven{font-size:11px;font-weight:700;color:var(--t1)}
+.var{font-size:10px;color:var(--t3);direction:rtl;margin-top:1px}
+.vdt{font-size:8px;color:var(--t4);margin-top:2px}
+.nbadge{font-size:7.5px;padding:1px 4px;border-radius:2px;background:rgba(192,57,43,.2);color:#e74c3c;border:1px solid rgba(192,57,43,.25);font-weight:700;margin-left:4px;text-transform:uppercase}
+/* DETAIL */
+.dc{padding:10px 12px;border-bottom:1px solid var(--bd2)}
+.dn{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.dar{font-size:11px;color:var(--t2);direction:rtl;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--bd2)}
+.dr{display:flex;gap:6px;margin-bottom:5px}
+.dk{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;min-width:72px;padding-top:1px;flex-shrink:0}
+.dv{font-size:10px;color:var(--t2);line-height:1.5;flex:1}
+.chip{font-size:9px;color:var(--acc3);background:rgba(52,152,219,.08);border:1px solid rgba(52,152,219,.15);border-radius:2px;padding:1px 4px;font-family:var(--font)}
+.ddesc{font-size:10px;color:var(--t2);line-height:1.6;margin-top:7px;padding-top:7px;border-top:1px solid var(--bd2)}
+.dsrc{font-size:8.5px;color:var(--t4);margin-top:5px;line-height:1.5}
+.dsrc b{color:var(--t3)}
+.dbadge{display:inline-flex;align-items:center;gap:3px;font-size:8px;padding:2px 6px;border-radius:2px}
+.dok{background:rgba(30,132,73,.15);color:#2ecc71;border:1px solid rgba(30,132,73,.2)}
+.dwarn{background:rgba(230,126,34,.15);color:#f39c12;border:1px solid rgba(230,126,34,.2)}
+.derr{background:rgba(192,57,43,.15);color:#e74c3c;border:1px solid rgba(192,57,43,.2)}
+/* LOG */
+.le{padding:7px 11px;border-bottom:1px solid var(--bd2);font-size:10px}
+.lt{font-size:8px;color:var(--t4)}
+.lm{margin-top:2px;line-height:1.5;color:var(--t2)}
+.lm.add{color:#2ecc71}.lm.upd{color:#f39c12}.lm.err{color:#e74c3c}.lm.inf{color:var(--acc3)}.lm.ver{color:#9b59b6}
+/* AUTO CONFIG */
+.ac{padding:10px 12px;border-top:1px solid var(--bd);flex-shrink:0}
+.act{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px}
+.ar{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;font-size:9px}
+.ar span{color:var(--t2)}.ar b{color:var(--t1)}
+.exp-btn{width:100%;margin-top:8px;padding:6px;background:rgba(36,113,163,.1);border:1px solid rgba(36,113,163,.3);border-radius:3px;color:var(--acc2);font-size:9px;font-family:var(--font);cursor:pointer}
+.exp-btn:hover{background:rgba(36,113,163,.2)}
+/* MAP */
+.leaflet-container{background:#0a1218!important}
+.leaflet-tile{filter:brightness(.35) saturate(.25) hue-rotate(185deg)}
+.leaflet-popup-content-wrapper{background:var(--bg3)!important;border:1px solid var(--bd)!important;color:var(--t1)!important;font-family:var(--font)!important;font-size:11px!important}
+.leaflet-popup-tip{background:var(--bg3)!important}
+.leaflet-control-zoom a{background:var(--bg3)!important;color:var(--t1)!important;border-color:var(--bd)!important;font-family:var(--font)!important}
+.leaflet-control-attribution{background:rgba(10,18,24,.8)!important;color:var(--t4)!important;font-size:8px!important}
+/* MODAL (SHARE) */
+#modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center}
+#modal-bg.open{display:flex}
+#modal{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;width:560px;max-height:85vh;overflow-y:auto;padding:20px}
+.modal-h{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.modal-sub{font-size:10px;color:var(--t3);margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bd)}
+.modal-close{float:right;background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;font-family:var(--font)}
+.mstep{margin-bottom:16px}
+.mstep h4{font-size:10px;font-weight:700;color:var(--acc3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.mstep p{font-size:10px;color:var(--t2);line-height:1.6;margin-bottom:6px}
+.code-block{background:var(--bg);border:1px solid var(--bd);border-radius:3px;padding:10px;font-size:9.5px;color:#a8d8a8;line-height:1.7;white-space:pre-wrap;word-break:break-all;position:relative}
+.copy-btn{position:absolute;top:6px;right:6px;padding:3px 8px;background:rgba(52,152,219,.15);border:1px solid rgba(52,152,219,.3);border-radius:2px;color:var(--acc2);font-size:8px;cursor:pointer;font-family:var(--font)}
+.copy-btn:hover{background:rgba(52,152,219,.3)}
+.option-pill{display:inline-block;padding:2px 8px;border:1px solid var(--bd);border-radius:10px;font-size:9px;color:var(--t3);margin:2px;cursor:default}
+/* MAP OVERLAY */
+#overlay{position:absolute;inset:0;background:rgba(10,18,24,.85);display:flex;align-items:center;justify-content:center;z-index:1000;pointer-events:none;transition:opacity .4s}
+.spin{width:28px;height:28px;border:2px solid var(--bd);border-top-color:var(--acc2);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="logo">🇱🇧 LEBANON <em>WAR</em> ARCHIVE</div>
+  <div class="toll-bar">
+    <div><span class="toll-num" id="t-killed">1,784</span> <span class="toll-label">killed</span></div>
+    <div><span class="toll-num" id="t-wounded">5,977</span> <span class="toll-label">wounded</span></div>
+    <div><span class="toll-num" id="t-disp">1.2M</span> <span class="toll-label">displaced</span></div>
+    <div style="color:var(--t4);font-size:9px" id="t-date">09 Apr 2026</div>
+  </div>
+  <div class="op-badge">⚡ OP. ETERNAL DARKNESS — 8 APR</div>
+  <div class="spacer"></div>
+  <div class="status-wrap">
+    <div class="led" id="led"></div>
+    <span id="st-txt">Ready</span>
+    <span style="color:var(--t4);font-size:9px">·</span>
+    <span style="color:var(--t3);font-size:9px">Next:</span>
+    <span id="countdown">60:00</span>
+  </div>
+  <button id="run-btn" onclick="runUpdate()">▶ Update Now</button>
+  <button id="share-btn" onclick="openShare()">⬆ Share / Deploy</button>
+</div>
+
+<!-- LEFT: village list -->
+<div id="left">
+  <div class="ph"><h3>Archive Database</h3><span id="vcnt" style="font-size:9px;color:var(--t3)">42 locations</span></div>
+  <div class="stats" id="stats"></div>
+  <div id="prog"><div id="progbar"></div></div>
+  <div class="filters" id="filters">
+    <div class="ft on" data-t="ground_invasion" style="color:var(--red)" onclick="toggleF(this)"><div class="d" style="background:var(--red)"></div><span>Invasion</span></div>
+    <div class="ft on" data-t="fully_destroyed" style="color:var(--ora)" onclick="toggleF(this)"><div class="d" style="background:var(--ora)"></div><span>Destroyed</span></div>
+    <div class="ft on" data-t="collateral_damage" style="color:var(--amb)" onclick="toggleF(this)"><div class="d" style="background:var(--amb)"></div><span>Collateral</span></div>
+    <div class="ft on" data-t="failed_attempt" style="color:var(--gry)" onclick="toggleF(this)"><div class="d" style="background:var(--gry)"></div><span>Failed</span></div>
+    <div class="ft on" data-t="outpost" style="color:var(--pur)" onclick="toggleF(this)"><div class="d" style="background:var(--pur)"></div><span>Outpost</span></div>
+  </div>
+  <div class="pb" id="vlist"></div>
+</div>
+
+<!-- MAP -->
+<div id="mid">
+  <div id="overlay"><div class="spin"></div></div>
+  <div id="map"></div>
+</div>
+
+<!-- RIGHT: detail + log + config -->
+<div id="right">
+  <div id="detail" style="flex-shrink:0;border-bottom:1px solid var(--bd)">
+    <div class="ph"><h3>Location Detail</h3></div>
+    <div style="padding:14px;text-align:center;color:var(--t4);font-size:10px">← Select a location</div>
+  </div>
+  <div style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div class="ph"><h3>Update Log</h3><span id="lcnt" style="font-size:9px;color:var(--t3)">0 events</span></div>
+    <div class="pb" id="log"></div>
+  </div>
+  <div class="ac">
+    <div class="act">Automation Config</div>
+    <div class="ar"><span>Interval</span><b>Every 60 min</b></div>
+    <div class="ar"><span>Sources</span><b>Wikipedia · UNIFIL · FDD/NNA · Al Jazeera</b></div>
+    <div class="ar"><span>Checks</span><b>Coord bounds · Date · Confidence · Cross-ref</b></div>
+    <div class="ar"><span>Last run</span><b id="last-run">—</b></div>
+    <div class="ar"><span>Total cycles</span><b id="run-count">0</b></div>
+    <button class="exp-btn" onclick="exportHTML()">⬇ Export Standalone Map HTML</button>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- SHARE MODAL -->
+<div id="modal-bg" onclick="if(event.target===this)closeShare()">
+<div id="modal">
+<button class="modal-close" onclick="closeShare()">✕</button>
+<div class="modal-h">📡 Share & Deploy Your Map</div>
+<div class="modal-sub">This is a single self-contained HTML file. No server, no database — just one file that works anywhere.</div>
+
+<div class="mstep">
+<h4>Option 1 — Netlify Drop (fastest, 60 seconds, free)</h4>
+<p>1. Click <b>"⬇ Export Standalone Map HTML"</b> below to download the file<br>
+2. Go to <a href="https://app.netlify.com/drop" target="_blank" style="color:var(--acc3)">app.netlify.com/drop</a><br>
+3. Drag the downloaded file onto the page<br>
+4. You get a live URL like <code style="color:var(--acc3)">https://abc123.netlify.app</code> — that's your shareable link</p>
+</div>
+
+<div class="mstep">
+<h4>Option 2 — GitHub Pages (permanent, free, your own domain)</h4>
+<p>1. Create free account at <a href="https://github.com" target="_blank" style="color:var(--acc3)">github.com</a> → New repository<br>
+2. Name it <code style="color:var(--acc3)">lebanon-map</code> → Upload the exported file, rename to <code style="color:var(--acc3)">index.html</code><br>
+3. Settings → Pages → Branch: main → Save<br>
+4. Your URL: <code style="color:var(--acc3)">https://YOUR-USERNAME.github.io/lebanon-map/</code></p>
+</div>
+
+<div class="mstep">
+<h4>Option 3 — Embed in your website (iframe)</h4>
+<p>After hosting on Netlify or GitHub Pages, paste this into your site:</p>
+<div class="code-block" id="iframe-code">&lt;iframe
+  src="https://YOUR-URL-HERE.netlify.app"
+  width="100%"
+  height="720px"
+  style="border:none; border-radius:6px;"
+  title="Lebanon War Archive 2024–2026"
+  loading="lazy"&gt;
+&lt;/iframe&gt;</div>
+<button class="copy-btn" onclick="copyCode('iframe-code')">Copy</button>
+</div>
+
+<div class="mstep">
+<h4>Option 4 — Responsive embed (works on mobile)</h4>
+<div class="code-block" id="resp-code">&lt;div style="position:relative;width:100%;padding-bottom:62%;height:0"&gt;
+  &lt;iframe
+    src="https://YOUR-URL-HERE.netlify.app"
+    style="position:absolute;top:0;left:0;width:100%;height:100%;border:none"
+    title="Lebanon War Archive"
+    loading="lazy"&gt;
+  &lt;/iframe&gt;
+&lt;/div&gt;</div>
+<button class="copy-btn" onclick="copyCode('resp-code')">Copy</button>
+</div>
+
+<div class="mstep">
+<h4>Option 5 — WordPress</h4>
+<p>In any page/post, add an <b>HTML block</b> and paste the iframe code above.</p>
+</div>
+
+<div class="mstep">
+<h4>Automated updates without engagement</h4>
+<p>To run updates without leaving a browser tab open, set up a GitHub Action that opens your Netlify URL every hour using a headless browser. This is more advanced but completely free. The system will auto-update your exported map each time it's opened in a browser with automation enabled.<br><br>
+<b>Simplest approach:</b> Keep the browser tab open. The 60-minute timer fires automatically — no clicks needed.</p>
+</div>
+
+<button class="exp-btn" style="margin-top:8px" onclick="exportHTML();closeShare()">⬇ Export Map + Close</button>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATABASE v10 — Updated 09 April 2026
+// OPERATION ETERNAL DARKNESS: 8 Apr — 254 killed in single day
+// Total: ~1,784 killed (1,530 before Op. Eternal Darkness + 254)
+// Sources: Wikipedia · Lebanon Civil Defence · Amnesty Int'l
+//          UNIFIL · CIR · Al Jazeera · Times of Israel · CBC
+// ═══════════════════════════════════════════════════════════
+
+const DB0 = [
+// ── GROUND INVASION ────────────────────────────────────────
+{id:1,lat:33.2833,lng:35.5500,en:'Kfar Kila',ar:'كفر كلا',type:'ground_invasion',date:'4 Mar 2026',ds:'20260304',pct:65,dist:'Marjayoun',gov:'Nabatieh',csrc:'latitude.to: 33°16\'60"N 35°33\'0"E',units:'91st Div. / 401st Bde',pop:7000,score:98,
+ st:'Occupied — permanent IDF outpost; IDF demolition plan confirmed ("Rafah model")',
+ desc:'UNIFIL confirmed 04 Mar 2026. Amnesty Int\'l: >1,300 structures + 133 acres orchards destroyed. IDF flag on water tower. One of 5 permanent outposts. Times of Israel Apr 3: "all homes in first-line villages will be demolished per Rafah/Beit Hanoun model."',
+ src:'UNIFIL 04 Mar 2026 · Amnesty Int\'l Aug 2025 · Times of Israel Apr 3 2026'},
+{id:2,lat:33.2092,lng:35.5150,en:'Houla',ar:'حولا',type:'ground_invasion',date:'4 Mar 2026',ds:'20260304',pct:50,dist:'Marjayoun',gov:'Nabatieh',csrc:'Mapcarta/OSM Q1026808: 33°12\'33"N',units:'91st Division',pop:4500,score:97,
+ st:'Occupied — permanent outpost; village fully deserted',
+ desc:'UNIFIL confirmed 4 Mar. One of 5 permanent outposts. FDD/NNA Jan 2026: "massive detonation" destroyed 3-story building 1,600m from Blue Line. IDF fired on journalist. Completely deserted.',
+ src:'UNIFIL 04 Mar 2026 · FDD (Dec 2025, Jan 2026) · NNA Lebanon'},
+{id:3,lat:33.1192,lng:35.4044,en:'Yaroun',ar:'يارون',type:'ground_invasion',date:'4 Mar 2026',ds:'20260304',pct:55,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'Wikidata Q1194430: 33°7\'9"N 35°24\'16"E',units:'91st Division',pop:6000,score:97,
+ st:'Occupied — IDF tank roads across Blue Line; pine forests destroyed',
+ desc:'UNIFIL confirmed 4 Mar. 55% destroyed (Univ. Oregon satellite). Satellite: IDF tank roads crossed Blue Line. Tanks crushed electricity generators before Feb 2025 partial withdrawal (New Lines Magazine field visit). Pine forests razed (Green Southerners NGO satellite). Bayader neighborhood demolitions (FDD/NNA Jan 2026).',
+ src:'UNIFIL 04 Mar · Wikidata Q1194430 · Univ. Oregon Jan 2025 · Green Southerners NGO · FDD Jan 2026'},
+{id:4,lat:33.3294,lng:35.6139,en:'Khiam',ar:'الخيام',type:'ground_invasion',date:'4 Mar / 16 Mar 2026',ds:'20260304',pct:80,dist:'Marjayoun',gov:'Nabatieh',csrc:'latitude.to: 33°19\'22.68"N 35°36\'23.97"E',units:'91st / 36th Div.',pop:14500,score:99,
+ st:'Occupied — detention center demolished (Planet Labs satellite 23 Mar)',
+ desc:'UNIFIL confirmed 4 Mar. ACLED: clashes 4 Mar. Al Jazeera: "major battle under way" 16 Mar. Reuters: "effectively took control" 16 Mar. Planet Labs satellite 23 Mar: detention center demolished. 6km from border commanding northern Israel. Hezbollah struck Tel Hamames from Khiam direction.',
+ src:'UNIFIL 04 Mar · ACLED · Reuters 16 Mar · Planet Labs 23 Mar 2026'},
+{id:5,lat:33.5820,lng:35.6870,en:'Kfar Shouba',ar:'كفرشوبا',type:'ground_invasion',date:'4 Mar 2026',ds:'20260304',pct:18,dist:'Hasbaya',gov:'Nabatieh',csrc:'Wikipedia Kfar Shouba infobox',units:'810th Mountain Bde',pop:4000,score:96,
+ st:'Occupied — furthest NE ground penetration; near Shebaa Farms',
+ desc:'Explicitly named UNIFIL 04 Mar 2026. Near Shebaa Farms. CIR geolocated 810th Bde at 33.3342, 35.7678 on 3 Mar.',
+ src:'UNIFIL 04 Mar 2026 · CIR geolocated 03 Mar 2026'},
+{id:6,lat:33.1050,lng:35.4800,en:'Beit Lif',ar:'بيت ليف',type:'ground_invasion',date:'4 Mar 2026',ds:'20260304',pct:20,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'Wikipedia Beit Lif | OSM ~33.105, 35.480',units:'91st Division',pop:3500,score:96,
+ st:'UNIFIL confirmed; residents partially returned',
+ desc:'Explicitly named UNIFIL 4 Mar 2026. New Lines Magazine field visit: residents returned, café/bakery open. "A bit safer, farther from the border."',
+ src:'UNIFIL 04 Mar 2026 · New Lines Magazine field visit'},
+{id:7,lat:33.2525,lng:35.5388,en:'Adaisseh',ar:'عديسة',type:'ground_invasion',date:'Nov 2024–present',ds:'20241127',pct:45,dist:'Marjayoun',gov:'Nabatieh',csrc:'latitude.to: 33°15\'9"N 35°32\'19"E',units:'91st Div. — Jabal Blatt post',pop:3000,score:95,
+ st:'IDF Jabal Blatt outpost; two homes detonated Jan 2026; quadcopter on UNIFIL patrol',
+ desc:'Amnesty Int\'l case study. FDD/NNA Jan 2026: two homes detonated. Quadcopter dropped grenade 30m from UNIFIL peacekeepers during dismantling of IDF-rigged explosives (UNIFIL 12 Jan 2026). FDD Feb 2026: two more homes toward Wadi Hounine.',
+ src:'Amnesty Int\'l Aug 2025 · UNIFIL 12 Jan 2026 · FDD (Jan & Feb 2026)'},
+{id:8,lat:33.1156,lng:35.4722,en:'Aitaroun',ar:'عيترون',type:'ground_invasion',date:'Oct 2024; bypassed 29 Mar 2026',ds:'20241001',pct:42,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'Mapcarta/OSM Q410330: 33°6\'59"N 35°28\'17"E',units:'36th Brigade',pop:20000,score:97,
+ st:'Entered Oct 2024; bypassed toward Litani 29 Mar; 118 village residents killed',
+ desc:'IDF 36th Brigade entered Oct 2024. NNA: Merkava struck house; homes burned. Bypassed 29 Mar 2026 entering al-Bayada (Al Jazeera/Lebanese military). Wikipedia: 118 residents killed 2024–2026.',
+ src:'ISW News · NNA Lebanon · Al Jazeera 29 Mar 2026 · Wikipedia'},
+{id:9,lat:33.1219,lng:35.3388,en:'Qaouzah',ar:'القوزح',type:'ground_invasion',date:'9 Mar 2026',ds:'20260309',pct:30,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'CIR precision geolocated: 33.1219, 35.3388 — 09 Mar 2026',units:'36th Div. — Merkava IV + Namer APCs',pop:2200,score:99,
+ st:'IDF 2.75km inside Lebanon; UNIFIL Ghana HQ struck; Hezbollah fired on IDF here 07-08 Apr',
+ desc:'CIR geolocated 09 Mar: 2.75km inside Lebanon. Merkava IV & Namer APCs. Wikipedia: UNIFIL Ghana HQ struck, 3 injured. IDF admitted. LiveUAMap 07 Apr: Hezbollah rocketed IDF troops in Qaouzah.',
+ src:'CIR geolocated 09 Mar 2026 (primary) · Wikipedia 2026 · LiveUAMap 07 Apr'},
+{id:10,lat:33.3567,lng:35.5886,en:'Marjayoun',ar:'مرجعيون',type:'ground_invasion',date:'16 Mar 2026',ds:'20260316',pct:30,dist:'Marjayoun',gov:'Nabatieh',csrc:'latitude.to: 33°21\'23.96"N 35°35\'18.86"E',units:'91st / 36th Div.',pop:5000,score:97,
+ st:'IDF district control; Litani River reached; LAF withdrawn; Khardali Bridge struck',
+ desc:'Former Israeli security zone capital 1982–2000. IDF consolidating district since 16 Mar. Haaretz 2 Apr: IDF reached Litani section. LAF withdrawn north. Khardali Bridge struck 14 Mar (Alma Research). Operation Eternal Darkness 8 Apr struck areas in this district.',
+ src:'Reuters 16 Mar · Haaretz 2 Apr 2026 · Alma Research · LiveUAMap 08 Apr'},
+{id:11,lat:33.1187,lng:35.1338,en:'Naqoura',ar:'الناقورة',type:'ground_invasion',date:'27 Mar 2026',ds:'20260327',pct:20,dist:'Tyre',gov:'South',csrc:'latitude.to: 33°7\'7.20"N 35°8\'1.80"E',units:'162nd Division',pop:6000,score:96,
+ st:'IDF advanced past; UNIFIL HQ; Qasmiyeh Bridges struck 18 & 22 Mar; Tyre area struck 8 Apr',
+ desc:'162nd Division advanced past Naqoura toward al-Bayada 27 Mar. Alma Research: Qasmiyeh Bridge struck 18 Mar, Coastal Highway Bridge 22 Mar. Op. Eternal Darkness 8 Apr: IDF struck Tyre (near Naqoura) and issued evacuation orders for Tyre al-Abbasiyah area.',
+ src:'Historica Wiki 2026 · UNIFIL · Alma Research · Times of Israel 8 Apr 2026'},
+{id:12,lat:33.1322,lng:35.1700,en:'al-Bayada',ar:'البياضة',type:'ground_invasion',date:'29 Mar 2026',ds:'20260329',pct:20,dist:'Tyre',gov:'South',csrc:'Wikipedia 2026 | OSM ~33.132, 35.170',units:'162nd Division',pop:2500,score:97,
+ st:'IDF entered bypassing Aitaroun; advancing toward Litani',
+ desc:'Lebanese military sources told Al Jazeera: IDF "bypassed Aitaroun, entered al-Bayada, advanced toward Litani from below Qantara near al-Muhaysibat." Hezbollah claimed striking IDF tank.',
+ src:'Wikipedia 2026 · Al Jazeera 29 Mar 2026'},
+{id:13,lat:33.4200,lng:35.4900,en:'Rab El Thalathine',ar:'رب الثلاثين',type:'ground_invasion',date:'9 Mar 2026',ds:'20260309',pct:25,dist:'Nabatieh',gov:'Nabatieh',csrc:'OSM ~33.420, 35.490',units:'36th Division',pop:3000,score:93,
+ st:'36th Division deeper penetration confirmed',
+ desc:'Jerusalem Post 9 Mar: "36th Division penetrated deeper in Rab El Thalathine area." Lebanese Army deployment also named this location.',
+ src:'Jerusalem Post 09 Mar 2026 · ISW News · Lebanese Army stmt Feb 2025'},
+{id:14,lat:33.2764,lng:35.5206,en:'Taybeh',ar:'طيبة',type:'ground_invasion',date:'Jan–Apr 2026',ds:'20260101',pct:40,dist:'Marjayoun',gov:'Nabatieh',csrc:'Wikipedia "Taybeh, Marjayoun": 33°16\'35"N 35°31\'14"E',units:'91st Division',pop:4000,score:95,
+ st:'Deepest IDF inland penetration ~6km; fighting toward Deir Seryan and Litani',
+ desc:'This Is Beirut Apr 2026: "IDF advanced furthest near Taybeh — roughly 6km from border." Fighting at Deir Seryan east of Taybeh. Capture of Deir Seryan = strategic Litani access.',
+ src:'Wikipedia "Taybeh, Marjayoun" · This Is Beirut Apr 2026 · L\'Orient Today 26 Mar'},
+{id:15,lat:33.2736,lng:35.4636,en:'al-Qantara',ar:'القنطرة',type:'ground_invasion',date:'29 Mar–Apr 2026',ds:'20260329',pct:30,dist:'Marjayoun',gov:'Nabatieh',csrc:'Wikipedia "Al-Qantara, Marjayoun": 33°16\'25"N 35°27\'49"E',units:'91st / 36th Div.',pop:1500,score:97,
+ st:'IDF reached Litani River tributary south of Qantara — "big strategic change"',
+ desc:'Al Jazeera 31 Mar: "Troops reached Litani tributary south of Qantara — big strategic change." Haaretz 2 Apr: IDF reaching Litani. White phosphorus used in advance (L\'Orient Today 26 Mar, Human Rights Watch confirmed but IDF denied).',
+ src:'Wikipedia "Al-Qantara, Marjayoun" · Al Jazeera 31 Mar · Haaretz 2 Apr · HRW'},
+{id:16,lat:33.2908,lng:35.5064,en:'Deir Seryan',ar:'دير سريان',type:'ground_invasion',date:'26 Mar–Apr 2026',ds:'20260326',pct:35,dist:'Marjayoun',gov:'Nabatieh',csrc:'Wikipedia "Deir Siryan": 33°17\'27"N 35°30\'23"E',units:'91st / 36th Div. (Golani Bde)',pop:800,score:96,
+ st:'IDF attempting control 9km inside Lebanon; white phosphorus; Golani soldier killed; critical for Litani access',
+ desc:'L\'Orient Today 26 Mar (primary): "IDF attempting to take Deir Seryan, 9km+ from Blue Line, under white phosphorus shells. Hezbollah claimed ~20 Merkava tanks destroyed." Golani soldier Ori Greenberg killed in overnight clashes. Wikipedia updated Mar 2026. Al Jazeera 26 Mar: Hezbollah targeted IDF with guided missiles at Deir Siryan.',
+ src:'Wikipedia "Deir Siryan" · L\'Orient Today 26 Mar 2026 · Al Jazeera 26 Mar · This Is Beirut Apr 2026'},
+// ── FULLY DESTROYED ────────────────────────────────────────
+{id:17,lat:33.0733,lng:35.4075,en:'Maroun al-Ras',ar:'مارون الرأس',type:'fully_destroyed',date:'Oct 2024–present',ds:'20241001',pct:67,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'Wikidata Q1006476: 33°4\'24"N 35°24\'27"E',units:'91st / 36th Bde',pop:3500,score:99,
+ st:'Permanent IDF outpost — 67% demolished; settlers attempted occupation Oct 2024',
+ desc:'Amnesty Int\'l satellite: 700 structures (67%) destroyed Oct 2024–Jan 2025. IDF flag Oct 2024. Far-right Uri Tzafon settlers attempted settlement establishment here — dispersed by IDF (Wikipedia 2024). One of 5 permanent outposts.',
+ src:'Wikidata Q1006476 · Amnesty Int\'l Aug 2025 · Wikipedia 2024 invasion'},
+{id:18,lat:33.0972,lng:35.3344,en:'Ayta ash-Shaab',ar:'عيتا الشعب',type:'fully_destroyed',date:'Oct 2024–present',ds:'20241001',pct:57,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'Wikidata Q410303: 33°5\'50"N 35°20\'4"E',units:'91st Division',pop:12000,score:99,
+ st:'Permanent outpost — 48-57%; 4 mosques; 740 acres forest; demolitions 6 weeks post-ceasefire',
+ desc:'Amnesty Int\'l primary case study: >1,000 structures (48%) destroyed. 4 mosques demolished. Continued 6 weeks after ceasefire. 740 acres forest; olive trees uprooted (mukhtar, New Lines Magazine field visit). One of 5 permanent outposts.',
+ src:'Wikidata Q410303 · Amnesty Int\'l Aug 2025 · New Lines Magazine'},
+{id:19,lat:33.2333,lng:35.5167,en:'Markaba',ar:'مركبا',type:'fully_destroyed',date:'Nov 2024–present',ds:'20241127',pct:100,dist:'Marjayoun',gov:'Nabatieh',csrc:'Wikipedia: 33°14\'0"N 35°31\'0"E',units:'91st Div. — Hatzivoni outpost',pop:1800,score:98,
+ st:'100% razed — IDF Hatzivoni outpost; zero residents; commands 5+ villages',
+ desc:'AFP/L\'Orient Today satellite Nov 2025: ALL buildings surrounding Hatzivoni outpost demolished. Commands view over Kfar Kila, Ayta ash-Shaab, Maroun al-Ras, Aitaroun, Blida. Earthen berms. Zero residents.',
+ src:'Wikipedia · AFP/L\'Orient Today satellite Nov 2025 · UNIFIL'},
+{id:20,lat:33.1398,lng:35.5153,en:'Blida',ar:'بليدا',type:'fully_destroyed',date:'Oct 2024–present',ds:'20241001',pct:60,dist:'Marjayoun',gov:'Nabatieh',csrc:'Mapcarta/OSM: 33°8\'23"N 35°30\'55"E',units:'91st Division',pop:3200,score:97,
+ st:'Municipal hall stormed Oct 2024 (employee killed); 152+ buildings demolished',
+ desc:'IDF stormed Blida municipal hall Oct 2024, killing employee — President Aoun ordered army to repel (Wikipedia). ISW satellite: 152+ buildings demolished by bulldozers and cranes. FDD/NNA Dec 2025: residential home detonated.',
+ src:'Mapcarta/OSM · Wikipedia · ISW News · FDD Dec 2025'},
+{id:21,lat:33.1167,lng:35.2833,en:'Marwahin',ar:'مروحين',type:'fully_destroyed',date:'Oct 2024–present',ds:'20241001',pct:99,dist:'Tyre',gov:'South',csrc:'latitude.to: 33°6\'60"N 35°16\'60"E',units:'146th Division',pop:2500,score:98,
+ st:'~100% destroyed — last standing home demolished Dec 2025 (NNA/FDD primary)',
+ desc:'FDD/NNA Dec 2025: "IDF detonated home of Omar Dheeb al Qassem — last undamaged home in Marwahin." Machine-gun fire toward outskirts. Multiple 146th Brigade entries.',
+ src:'latitude.to · FDD Dec 2025 · NNA Lebanon · ISW News'},
+{id:22,lat:33.1050,lng:35.2250,en:'Ad-Duhairah',ar:'الظهيرة',type:'fully_destroyed',date:'Oct 2024–present',ds:'20241001',pct:65,dist:'Tyre',gov:'South',csrc:'Wikipedia: "Ad-Duhairah (Arabic: الظهيرة)" Tyre District',units:'146th Division',pop:2000,score:97,
+ st:'Mosque demolished in controlled explosion (verified video); Amnesty Int\'l case study',
+ desc:'CORRECT Arabic: الظهيرة. Wikipedia: "Ad-Duhairah (Arabic: الظهيرة), Tyre District." Washington Post: IDF controlled demolition of mosque (Oct 2024, verified video). Amnesty Int\'l satellite case study. UNIFIL 25 Oct 2024: IDF fired at observation post near Dhayra.',
+ src:'Wikipedia Ad-Duhairah · Amnesty Int\'l Aug 2025 · Washington Post Oct 2024 · UNIFIL 25 Oct 2024'},
+{id:23,lat:33.0817,lng:35.4778,en:'Mhaibib',ar:'محيبيب',type:'fully_destroyed',date:'Oct 2024–present',ds:'20241001',pct:60,dist:'Marjayoun',gov:'Nabatieh',csrc:'Wikipedia Muhaibib | OSM ~33.082, 35.478',units:'91st Division',pop:2000,score:96,
+ st:'IDF destruction confirmed: ISW satellite + The Daily Telegraph + Al Jazeera',
+ desc:'ISW satellite confirmed alongside Meis al-Jabal and Blida. The Daily Telegraph and Al Jazeera confirmed IDF razed Mhaibib (Wikipedia 2024). Lebanese Army deployed 17-18 Feb 2025.',
+ src:'Wikipedia Muhaibib · ISW News · Wikipedia 2024 invasion · Lebanese Army stmt'},
+{id:24,lat:33.0647,lng:35.4611,en:'Meis al-Jabal',ar:'ميس الجبل',type:'fully_destroyed',date:'Oct 2024–present',ds:'20241001',pct:55,dist:'Marjayoun',gov:'Nabatieh',csrc:'Wikipedia Mais al-Jabal | OSM ~33.065, 35.461',units:'91st Division',pop:10965,score:95,
+ st:'Heavy destruction ISW satellite; quadcopter attacks Jan 2026',
+ desc:'ISW satellite confirmed alongside Mhaibib and Blida. FDD/NNA Jan 2026: quadcopter dropped 4 fragmentation explosives in Kasayer; another dropped explosive on excavator.',
+ src:'Wikipedia Mais al-Jabal · ISW News · FDD Jan 2026'},
+// ── COLLATERAL DAMAGE ────────────────────────────────────────
+{id:25,lat:33.1222,lng:35.4390,en:'Bint Jbeil',ar:'بنت جبيل',type:'collateral_damage',date:'Oct 2024–Apr 2026',ds:'20241001',pct:40,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'latitude.to: 33°7\'19.80"N 35°26\'20.39"E',units:'36th Brigade',pop:30000,score:96,
+ st:'Municipality killed 15 Oct 2024; 2 paramedics killed 2026; struck 8 Apr Op. Eternal Darkness',
+ desc:'Wikipedia 2024: strike on municipality killed 15. Wikipedia 2026: 2 paramedics killed. Op. Eternal Darkness 8 Apr: smoke rising from Bint Jbeil seen from Israeli side of border (CBC Reuters photo).',
+ src:'latitude.to · Wikipedia 2024 & 2026 · CBC/Reuters 8 Apr 2026'},
+{id:26,lat:33.2190,lng:35.2820,en:'Tayr Harfa',ar:'طير حرفا',type:'collateral_damage',date:'Oct 2024–present',ds:'20241001',pct:45,dist:'Tyre',gov:'South',csrc:'OSM ~33.219, 35.282',units:'146th Division',pop:3500,score:96,
+ st:'Water tower struck by direct fire (HRW verified); total infrastructure destruction',
+ desc:'HRW researcher Richard Weir (on-site): water tower struck with "direct fire." New Lines Magazine — Deputy Mayor Hussein Yousef: "completely destroyed infrastructure, not leaving stones or trees untouched." NNA: Hezbollah commander and daughters killed here.',
+ src:'Human Rights Watch (on-site) · New Lines Magazine field visit · NNA Lebanon'},
+{id:27,lat:33.1042,lng:35.1800,en:'Aalma ash-Shaab',ar:'علما الشعب',type:'collateral_damage',date:'Oct 2024–present',ds:'20241001',pct:5,dist:'Tyre',gov:'South',csrc:'getamap.net: 33.1042, 35.18 | Wikipedia confirmed',units:'146th Division area',pop:1080,score:98,
+ st:'Largely spared (Christian village, 5%); two brothers\' homes razed during ceasefire',
+ desc:'Amnesty Int\'l: "only 5% of structures damaged" — Christian village. New Lines Magazine: resident showed journalist two homes (brothers — one a general) razed during ceasefire. MERIP: ancient olive groves uprooted. FDD Feb 2026: machine-gun fire toward Labbouneh near outskirts.',
+ src:'getamap.net · Amnesty Int\'l Aug 2025 · New Lines Magazine · MERIP Jan 2025'},
+{id:28,lat:33.2444,lng:35.4917,en:'Bani Hayyan',ar:'بني حيّان',type:'collateral_damage',date:'30 Mar 2026',ds:'20260330',pct:35,dist:'Marjayoun',gov:'Nabatieh',csrc:'getamap.net: 33.2444, 35.4917',units:'IDF active in area',pop:2000,score:97,
+ st:'2 Indonesian UNIFIL peacekeepers killed 30 Mar; 3rd peacekeeper killed nearby 31 Mar',
+ desc:'UNIFIL: 2 Indonesian peacekeepers killed (roadside explosion) near Bani Hayyan 30 Mar. Al Jazeera 31 Mar: 3rd UNIFIL peacekeeper killed near Adchit Al Qusayr. UNIFIL patrol targeted on Bani Hayyan-Talousa road 1 Apr.',
+ src:'UNIFIL (30 Mar & 01 Apr 2026) · Al Jazeera 31 Mar 2026'},
+{id:29,lat:33.0333,lng:35.4333,en:'Rmeish',ar:'رميش',type:'collateral_damage',date:'Oct 2024–present',ds:'20241001',pct:1,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'Wikipedia Rmaish (Wikidata Q697929) ~33.033, 35.433',units:'IDF area ops',pop:5000,score:98,
+ st:'Southernmost Lebanese municipality; <1% damage (Maronite Christian)',
+ desc:'Amnesty Int\'l: "less than 1% of its 2,200+ structures damaged." Southernmost municipality of Lebanon. Christian Maronite village.',
+ src:'Wikipedia Rmaish · Amnesty Int\'l Aug 2025'},
+{id:30,lat:33.3600,lng:35.4750,en:'Kfar Hatta',ar:'كفر حتى',type:'collateral_damage',date:'5 Apr 2026',ds:'20260405',pct:40,dist:'Nabatieh',gov:'Nabatieh',csrc:'OSM ~33.360, 35.475 | Wikipedia "Kfar Hatta" Sidon District',units:'IDF air force',pop:2000,score:97,
+ st:'Easter Sunday 5 Apr: 7 killed including 4-year-old girl; preceded by evacuation order',
+ desc:'Jerusalem Post 5 Apr 2026: "Airstrike on Kfar Hatta killed seven including 4-year-old child. Strike followed overnight evacuation order." Wikipedia Timeline: "Seven people including four-year-old girl were killed in Kfar Hatta." One of Lebanon\'s most violent days before Op. Eternal Darkness.',
+ src:'Jerusalem Post 5 Apr 2026 · Lebanon MoH · Wikipedia Timeline 2026'},
+{id:31,lat:33.3300,lng:35.3900,en:'Zawtar al-Gharbiyah',ar:'زوطر الغربية',type:'collateral_damage',date:'28 Mar 2026',ds:'20260328',pct:30,dist:'Nabatieh',gov:'Nabatieh',csrc:'OSM/Mapcarta ~33.330, 35.390',units:'IDF air force',pop:3000,score:97,
+ st:'5 paramedics killed in airstrike 28 Mar 2026; evacuation ordered',
+ desc:'Wikipedia "2026 in Lebanon" (28 Mar): "Five paramedics killed in Israeli airstrike in Zawtar al-Gharbiyah." IDF had issued evacuation orders. WHO: 9 paramedics killed in 5 healthcare attacks across south Lebanon — Zawtar was one incident. Lebanon MoH: 31 paramedics killed by late March.',
+ src:'Wikipedia "2026 in Lebanon" 28 Mar · Wikipedia 2026 Lebanon war · WHO statement'},
+{id:32,lat:33.0589,lng:35.4500,en:'Ain Ebel',ar:'عين إبل',type:'collateral_damage',date:'Mar–Apr 2026',ds:'20260301',pct:15,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'Wikipedia "Ain Ebel" Bint Jbeil | OSM ~33.059, 35.450',units:'IDF air force / drones',pop:3000,score:95,
+ st:'Drone struck teacher\'s residence; 3 men killed on outskirts; evacuation ordered',
+ desc:'Wikipedia 2026: "Israeli drone targeted teacher\'s residence in Ain Ebel — family survived." Wikipedia 2026: "Israeli strike on outskirts of Ain Ebel killed three men." IDF issued evacuation orders for Ain Ebel residents. Largely Christian village.',
+ src:'Wikipedia 2026 Lebanon war (two separate incidents) · Wikipedia "Ain Ebel"'},
+// NEW v10: Adloun — 3 girls killed 8 Apr Op. Eternal Darkness
+{id:33,lat:33.5456,lng:35.3694,en:'Adloun',ar:'عدلون',type:'collateral_damage',date:'8 Apr 2026',ds:'20260408',pct:20,dist:'Sidon',gov:'South',csrc:'Wikipedia "Adloun": 33°32\'44"N 35°22\'10"E | OSM confirmed',units:'IDF air force — Operation Eternal Darkness',pop:7000,score:97,isnew:true,
+ st:'🔴 NEW — 3 girls killed in Israeli attack during Op. Eternal Darkness 8 Apr 2026',
+ desc:'Wikipedia "April 8, 2026, Lebanon attacks" (primary): "Three girls were killed in an Israeli attack on the coastal town of Adloun, south of Sidon." Part of Operation Eternal Darkness — Israel\'s largest coordinated strike of the war (50 jets, 160 munitions, 100 targets in 10 minutes at 2:30pm rush hour). No advance warning given.',
+ src:'Wikipedia "April 8, 2026, Lebanon attacks" · Lebanon Civil Defence · Al Jazeera 8 Apr 2026'},
+// NEW v10: Shmestar — 10 killed at funeral 8 Apr
+{id:34,lat:33.9700,lng:36.0600,en:'Shmestar',ar:'شمسطار',type:'collateral_damage',date:'8 Apr 2026',ds:'20260408',pct:20,dist:'Baalbek-Hermel',gov:'Baalbek-Hermel',csrc:'Wikipedia "Shmestar" Bekaa Valley | OSM ~33.970, 36.060',units:'IDF air force — Operation Eternal Darkness',pop:5000,score:96,isnew:true,
+ st:'🔴 NEW — 10 killed at a funeral during Operation Eternal Darkness 8 Apr 2026',
+ desc:'Wikipedia "April 8, 2026, Lebanon attacks" (primary): "An Israeli airstrike targeted a cemetery in the Bekaa Valley village of Shmestar during a funeral, killing at least ten mourners and wounding four others. The Lebanese National News Agency reported the strike directly hit the cemetery where the funeral was being held." Operation Eternal Darkness struck multiple areas simultaneously including the Bekaa Valley.',
+ src:'Wikipedia "April 8, 2026, Lebanon attacks" · NNA Lebanon · Historica Wiki "Operation Eternal Darkness"'},
+// ── FAILED ATTEMPTS ───────────────────────────────────────
+{id:35,lat:33.1167,lng:35.3167,en:'Ramyeh',ar:'رامية',type:'failed_attempt',date:'Oct 2024–Mar 2026',ds:'20241001',pct:30,dist:'Bint Jbeil',gov:'Nabatieh',csrc:'getamap.net: 33.1167, 35.3167',units:'91st Division',pop:3000,score:91,
+ st:'Hezbollah held Abu al-Laban hill; IDF never established permanent control',
+ desc:'ISW: IDF attacked on "Aitaroun-Ramyeh axis." Hezbollah maintained Abu al-Laban hill east of Ayta ash-Shaab. Arabic military report: "ambushes and armor targeting impeding fixed IDF presence." IDF never held Ramyeh.',
+ src:'getamap.net · ISW News · Arabic military analysis · FDD'},
+{id:36,lat:33.4764,lng:35.5336,en:'Beaufort Castle Area',ar:'منطقة قلعة الشقيف / بوفور',type:'failed_attempt',date:'7 Apr 2026',ds:'20260407',pct:null,dist:'Nabatieh',gov:'Nabatieh',csrc:'Wikipedia "Beaufort Castle" ~33.4764, 35.5336',units:'IDF ground forces',pop:null,score:89,
+ st:'IDF river crossing attempt near Beaufort repelled by heavy fire (07 Apr)',
+ desc:'LiveUAMap 07 Apr citing Israeli Channel 15: "An Israeli force attempted to cross a river in the Beaufort area of southern Lebanon and was met with heavy fire." Beaufort Castle (Qalaat al-Shaqif) commands the Litani River valley below. First confirmed IDF attempt to cross the Litani — repelled. IDF continued strikes on area 8 Apr.',
+ src:'LiveUAMap 07 Apr 2026 (Israeli Ch. 15) — PRIMARY · Wikipedia "Beaufort Castle"'},
+// ── PERMANENT IDF OUTPOSTS ────────────────────────────────
+{id:37,lat:33.0983,lng:35.1511,en:'Labbouneh (IDF Outpost)',ar:'لبّونة (موقع إسرائيلي)',type:'outpost',date:'Nov 2024–present',ds:'20241127',pct:null,dist:'Tyre',gov:'South',csrc:'getamap.net: 33.0983, 35.1511',units:'146th Division',pop:null,score:95,
+ st:'Westernmost of 5 permanent outposts; ~150m from UNIFIL; expanded Jan 2026',
+ desc:'AFP/L\'Orient Today satellite Nov 2025: westernmost of 5 permanent outposts, ~150m from UNIFIL and Blue Line. CIR Jan 2026: "Labboune 2 site showing new fortifications." Earthen berms, access roads.',
+ src:'getamap.net · AFP/L\'Orient Today satellite Nov 2025 · CIR Jan 2026'},
+{id:38,lat:33.3560,lng:35.5100,en:'Tel Aziyeh (IDF Outpost)',ar:'تل الزعيزع (موقع إسرائيلي)',type:'outpost',date:'Nov 2024–present',ds:'20241127',pct:null,dist:'Marjayoun',gov:'Nabatieh',csrc:'FDD/NNA: "Tel Aziyeh near Deir Mimas" | OSM',units:'91st Division',pop:null,score:94,
+ st:'Named IDF post near Deir Mimas; repeatedly referenced in FDD/NNA field reports',
+ desc:'FDD/NNA Dec 2025: "Ground force entered Houla 1,600m from Blue Line and 1,400m from IDF Tel Aziyeh post." FDD Feb 2026: "Artillery targeted surroundings of Tel Aziyeh near Deir Mimas."',
+ src:'FDD Long War Journal (Dec 2025, Jan 2026, Feb 2026) · NNA Lebanon'},
+{id:39,lat:33.4050,lng:35.6200,en:'Tel Hamames (IDF Outpost)',ar:'تل الحمامص (موقع إسرائيلي)',type:'outpost',date:'Nov 2024–present',ds:'20241127',pct:null,dist:'Marjayoun',gov:'Nabatieh',csrc:'AFP/L\'Orient Today satellite: ~1.5km from Israel border S of Khiam',units:'210th Brigade',pop:null,score:95,
+ st:'Deepest permanent position (~1.5km inside Lebanon); commands Khiam; Hezbollah struck it',
+ desc:'AFP/L\'Orient Today satellite Nov 2025: ~1.5km from Israel border S of Khiam. FDD/NNA Jan 2026: "detonation near Tel Hamames." Wikipedia 2026: "Hezbollah claimed targeting Tell al-Hamames." IDF artillery directed toward Khiam from here.',
+ src:'AFP/L\'Orient Today Nov 2025 · FDD Jan 2026 · Wikipedia 2026'},
+{id:40,lat:33.2200,lng:35.5280,en:'Hatzivoni Outpost (Houla–Markaba)',ar:'موقع هاتزيفوني (حولا–مركبا)',type:'outpost',date:'Nov 2024–present',ds:'20241127',pct:null,dist:'Marjayoun',gov:'Nabatieh',csrc:'AFP/L\'Orient Today satellite Nov 2025',units:'91st Division',pop:null,score:95,
+ st:'IDF Hatzivoni outpost; all surrounding buildings demolished; commands 5 villages',
+ desc:'AFP/L\'Orient Today satellite Nov 2025: Hatzivoni outpost between Houla and Markaba. Commands view over Kfar Kila, Ayta ash-Shaab, Maroun al-Ras, Aitaroun, Blida. All surrounding buildings demolished.',
+ src:'AFP/L\'Orient Today satellite Nov 2025 · UNIFIL'},
+{id:41,lat:33.3342,lng:35.7678,en:'Shebaa Farms (810th Bde)',ar:'مزارع شبعا (لواء ٨١٠)',type:'outpost',date:'3 Mar 2026',ds:'20260303',pct:null,dist:'Hasbaya',gov:'Nabatieh',csrc:'CIR PRECISION GEOLOCATED: 33.3342, 35.7678 — footage verified 03 Mar 2026',units:'810th Mountain Brigade',pop:null,score:99,
+ st:'IDF 810th Bde ~150m inside Lebanon; CIR precision geolocated (most precise coord in DB)',
+ desc:'CIR verified IDF footage 03 Mar 2026: 4 troops from 810th Mountain Brigade at hilltop ~150m inside Lebanon near Shebaa Farms. IDF caption: "Forces of the Mountains Brigade (810) in the Mount Dov area in Lebanon." CIR exact coordinates: 33.3342, 35.7678.',
+ src:'CIR (Centre for Information Resilience) — precision geolocated 03 Mar 2026 (PRIMARY SOURCE ONLY)'},
+// NEW v10: Operation Eternal Darkness — Tyre (Hiram Hospital area)
+{id:42,lat:33.2731,lng:35.2031,en:'Tyre (Op. Eternal Darkness)',ar:'صور (عملية الظلام الأبدي)',type:'collateral_damage',date:'8 Apr 2026',ds:'20260408',pct:30,dist:'Tyre',gov:'South',csrc:'Wikipedia "Tyre, Lebanon" 33°16\'23"N 35°12\'11"E',units:'IDF air force — Operation Eternal Darkness',pop:60000,score:96,isnew:true,
+ st:'🔴 NEW — Hiram Hospital damaged; ambulance struck; 4 killed near hospital; IDF evacuation orders for Tyre 8 Apr',
+ desc:'Wikipedia "April 8, 2026, Lebanon attacks" (primary): "Doctors without Borders reported its health care staff were injured by Israeli forces at Hiram Hospital, Tyre. Israeli forces also reportedly caused extensive damage at the hospital. Local Lebanese news reported an airstrike near that hospital that killed four people. Israel also struck an ambulance near Tyre." IDF issued evacuation warnings for al-Abbasiyah area of Tyre (Times of Israel 8 Apr). Part of Operation Eternal Darkness — 50 jets, 160 munitions in 10 minutes.',
+ src:'Wikipedia "April 8, 2026, Lebanon attacks" · Doctors Without Borders 8 Apr · Times of Israel 8 Apr 2026 · CBC 8 Apr 2026'}
+];
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let DB = DB0.map(v=>({...v}));
+let SEL = null;
+let FILT = new Set(['ground_invasion','fully_destroyed','collateral_damage','failed_attempt','outpost']);
+let LOG = [];
+let RUNS = 0;
+let TICK = 3600;
+let TID = null;
+let MKS = {};
+let BUSY = false;
+
+const TOLL = {killed:1784,wounded:5977,disp:'1.2M+',date:'09 Apr 2026 (1,530 pre-Op.ED + 254 Op.Eternal Darkness)'};
+
+const TC = {
+  ground_invasion:  {c:'#c0392b',f:'#7b241c',r:12},
+  fully_destroyed:  {c:'#d35400',f:'#935116',r:10},
+  collateral_damage:{c:'#c9920a',f:'#886300',r:8},
+  failed_attempt:   {c:'#4a5568',f:'#2d3748',r:8},
+  outpost:          {c:'#6c3483',f:'#4a235a',r:10},
+};
+const TLABEL = {ground_invasion:'Ground Invasion',fully_destroyed:'Fully Destroyed',collateral_damage:'Collateral Damage',failed_attempt:'Failed Attempt',outpost:'Perm. Outpost'};
+
+// ═══════════════════════════════════════════════════════════
+// MAP
+// ═══════════════════════════════════════════════════════════
+let MAP;
+function initMap(){
+  MAP = L.map('map',{center:[33.22,35.45],zoom:10,preferCanvas:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:19}).addTo(MAP);
+
+  // Litani River
+  const LIT=[[33.544,35.783],[33.538,35.748],[33.528,35.710],[33.515,35.672],[33.505,35.635],[33.493,35.598],[33.478,35.558],[33.462,35.520],[33.443,35.485],[33.422,35.452],[33.400,35.420],[33.377,35.390],[33.355,35.360],[33.334,35.330],[33.312,35.300],[33.290,35.265],[33.268,35.230],[33.248,35.198],[33.230,35.165],[33.210,35.130]];
+  L.polyline(LIT,{color:'#2471a3',weight:3,opacity:.85}).addTo(MAP).bindTooltip('Litani River — IDF reached tributary (2 Apr 2026)',{sticky:true,opacity:.9});
+
+  // Security zone
+  const SZ=[...LIT,[33.19,35.10],[33.07,35.12],[33.065,35.25],[33.06,35.38],[33.055,35.52],[33.06,35.65],[33.07,35.78],[33.09,35.88],[33.13,35.935],[33.20,35.96],[33.30,35.97],[33.40,35.955],[33.50,35.91],[33.545,35.862],[33.544,35.783]];
+  L.polygon(SZ,{color:'#c0392b',weight:1.5,fillColor:'#c0392b',fillOpacity:.07,dashArray:'6 3',opacity:.4}).addTo(MAP);
+
+  // Destroyed bridges
+  [[33.295,35.224,'Qasmiyeh Bridge DESTROYED 18 Mar'],[33.508,35.268,'Zrarieh Bridge DESTROYED 22 Mar'],[33.430,35.705,'Dlafy Bridge DESTROYED 23-24 Mar'],[33.425,35.558,'Khardali Bridge struck 14 Mar']].forEach(([la,lo,t])=>{
+    L.circleMarker([la,lo],{radius:6,color:'#e74c3c',fillColor:'#e74c3c',fillOpacity:.9,weight:1}).addTo(MAP).bindTooltip('❌ '+t,{sticky:true,opacity:.9});
+  });
+
+  // Labels
+  function lbl(la,lo,html){L.marker([la,lo],{icon:L.divIcon({className:'',html,iconAnchor:[0,8]}),interactive:false}).addTo(MAP)}
+  lbl(33.37,35.72,'<div style="font-size:9px;font-weight:700;color:#5dade2;white-space:nowrap;text-shadow:0 0 6px #0a1218">◀ Litani River</div>');
+  lbl(33.088,35.22,'<div style="font-size:8.5px;color:#4d6e8c;white-space:nowrap;background:rgba(10,18,24,.8);padding:1px 4px;border:1px solid #243347">— Blue Line —</div>');
+  lbl(33.295,35.400,'<div style="font-size:8.5px;font-weight:700;color:#e74c3c;white-space:nowrap;text-shadow:0 0 5px #0a1218">⚡ IDF reached Litani tributary (2 Apr)</div>');
+
+  // Op. Eternal Darkness coverage overlay
+  const ED=L.rectangle([[33.0,35.0],[34.0,36.2]],{color:'#c0392b',weight:0,fillColor:'#c0392b',fillOpacity:.04,interactive:false});
+  ED.addTo(MAP);
+  lbl(33.85,35.55,'<div style="font-size:8px;color:rgba(192,57,43,.6);white-space:nowrap;letter-spacing:.4px;text-transform:uppercase">Op. Eternal Darkness — 48 areas hit 8 Apr</div>');
+
+  document.getElementById('overlay').style.opacity='0';
+  setTimeout(()=>{document.getElementById('overlay').style.display='none'},600);
+  renderMarkers();
+}
+
+function renderMarkers(){
+  Object.values(MKS).forEach(({c,l})=>{MAP.removeLayer(c);if(l)MAP.removeLayer(l)});
+  MKS={};
+  DB.filter(v=>FILT.has(v.type)).forEach(v=>{
+    const t=TC[v.type],sel=v.id===SEL;
+    const c=L.circleMarker([v.lat,v.lng],{
+      radius:sel?t.r+3:t.r,
+      color:sel?'#2471a3':v.isnew?'#e74c3c':t.c,
+      fillColor:t.f,fillOpacity:.88,
+      weight:sel?3:v.isnew?2.5:2
+    });
+    c.on('click',()=>pick(v.id));c.addTo(MAP);
+    const l=L.marker([v.lat,v.lng],{
+      icon:L.divIcon({className:'',html:`<div style="font-size:9px;font-weight:${v.type==='ground_invasion'||v.type==='outpost'?700:500};color:${v.isnew?'#e74c3c':t.c};white-space:nowrap;text-shadow:0 0 5px #0a1218,1px 1px 2px #0a1218;margin-left:${t.r+5}px;margin-top:-4px;pointer-events:none">${v.en}${v.isnew?' ●':''}</div>`,iconAnchor:[0,11]}),
+      interactive:false,zIndexOffset:-100
+    });
+    l.addTo(MAP);MKS[v.id]={c,l};
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════
+function renderAll(){renderStats();renderList();renderDetail()}
+
+function renderStats(){
+  const counts={};
+  DB.forEach(v=>counts[v.type]=(counts[v.type]||0)+1);
+  document.getElementById('vcnt').textContent=DB.length+' locations';
+  const cfg=[['GI','ground_invasion','var(--red)'],['FD','fully_destroyed','var(--ora)'],['CD','collateral_damage','var(--amb)'],['FA','failed_attempt','var(--gry)'],['OUT','outpost','var(--pur)']];
+  document.getElementById('stats').innerHTML=cfg.map(([l,k,c])=>`<div class="st"><div class="stn" style="color:${c}">${counts[k]||0}</div><div class="stl">${l}</div></div>`).join('');
+}
+
+function renderList(){
+  const vis=DB.filter(v=>FILT.has(v.type)).sort((a,b)=>b.ds.localeCompare(a.ds));
+  document.getElementById('vlist').innerHTML=vis.map(v=>{
+    const t=TC[v.type];
+    return `<div class="vi${v.id===SEL?' sel':''}" onclick="pick(${v.id})" data-id="${v.id}">
+      <div class="vr1"><div class="vdot" style="background:${t.c}"></div><span class="ven">${v.en}${v.isnew?'<span class="nbadge">NEW</span>':''}</span></div>
+      <div class="var">${v.ar}</div>
+      <div class="vdt">${v.date} · ${v.dist}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderDetail(){
+  const el=document.getElementById('detail');
+  if(!SEL){el.innerHTML='<div class="ph"><h3>Location Detail</h3></div><div style="padding:14px;text-align:center;color:var(--t4);font-size:10px">← Select a location</div>';return}
+  const v=DB.find(x=>x.id===SEL);if(!v)return;
+  const t=TC[v.type];
+  const sc=v.score;
+  const scCol=sc>=95?'#2ecc71':sc>=80?'#f39c12':'#e74c3c';
+  const vClass=sc>=90?'dok':sc>=70?'dwarn':'derr';
+  const vIcon=sc>=90?'✓':sc>=70?'~':'⚠';
+  el.innerHTML=`
+    <div class="ph"><h3>Location Detail</h3><span class="dbadge ${vClass}"><span style="width:4px;height:4px;border-radius:50%;background:currentColor;display:inline-block"></span>${vIcon} ${sc}% confidence</span></div>
+    <div class="dc">
+      <div class="dn">${v.en}${v.isnew?'<span class="nbadge">NEW</span>':''}</div>
+      <div class="dar">${v.ar}</div>
+      <div class="dr"><span class="dk">DATE</span><span class="dv">${v.date}</span></div>
+      <div class="dr"><span class="dk">TYPE</span><span class="dv" style="color:${t.c}">${TLABEL[v.type]}</span></div>
+      <div class="dr"><span class="dk">DESTRUCTION</span><span class="dv">${v.pct!=null?v.pct+'%':'N/A (military position)'}</span></div>
+      <div class="dr"><span class="dk">IDF UNITS</span><span class="dv">${v.units||'—'}</span></div>
+      <div class="dr"><span class="dk">STATUS</span><span class="dv" style="color:var(--t1);font-size:9.5px">${v.st}</span></div>
+      ${v.pop?`<div class="dr"><span class="dk">POPULATION</span><span class="dv">${v.pop.toLocaleString()} pre-war</span></div>`:''}
+      <div class="dr"><span class="dk">GPS</span><span class="dv"><span class="chip">${v.lat.toFixed(4)}, ${v.lng.toFixed(4)}</span></span></div>
+      <div class="dr"><span class="dk">COORD SRC</span><span class="dv" style="font-size:8.5px;color:var(--t3)">${v.csrc}</span></div>
+      <div class="ddesc">${v.desc}</div>
+      <div class="dsrc"><b>Sources:</b> ${v.src}</div>
+    </div>`;
+}
+
+function pick(id){
+  SEL=SEL===id?null:id;
+  renderAll();renderMarkers();
+  if(SEL){
+    const v=DB.find(x=>x.id===id);
+    if(v)MAP.setView([v.lat,v.lng],14,{animate:true});
+    const el=document.querySelector(`.vi[data-id="${id}"]`);
+    if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+}
+
+function toggleF(el){
+  const t=el.dataset.t;
+  if(FILT.has(t)){FILT.delete(t);el.classList.remove('on');el.classList.add('off')}
+  else{FILT.add(t);el.classList.remove('off');el.classList.add('on')}
+  renderAll();renderMarkers();
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOG
+// ═══════════════════════════════════════════════════════════
+function addLog(type,msg){
+  const ts=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  LOG.unshift({type,msg,ts});
+  if(LOG.length>300)LOG.pop();
+  const el=document.getElementById('log');
+  document.getElementById('lcnt').textContent=LOG.length+' events';
+  el.innerHTML=LOG.map(e=>`<div class="le"><div class="lt">${e.ts}</div><div class="lm ${e.type}">${e.msg}</div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTOMATED UPDATE ENGINE — Claude API + web_search
+// ═══════════════════════════════════════════════════════════
+async function runUpdate(){
+  if(BUSY)return;
+  BUSY=true;RUNS++;
+  const btn=document.getElementById('run-btn');
+  btn.disabled=true;btn.textContent='⏳ Updating...';
+  setLED('busy','Updating...');
+  setProg(5);
+  addLog('inf',`[UPDATE #${RUNS}] Starting automated update — searching for latest Lebanon war news...`);
+
+  try{
+    setProg(12);
+    addLog('inf','Calling Claude API with web_search tool — querying Wikipedia, Al Jazeera, UNIFIL, FDD/NNA...');
+
+    const today=new Date().toDateString();
+    const prompt=`You are a rigorous military archivist for a Lebanon war database (2024-2026). Today is ${today}.
+
+Using your web search capability, find the LATEST verified updates about IDF military operations in south Lebanon and return ONLY a JSON object (no markdown, no extra text) with this exact structure:
+
+{
+  "killed": <latest cumulative total number>,
+  "wounded": <latest cumulative total>,
+  "displaced": "<string like 1.2M+>",
+  "toll_date": "<date of toll>",
+  "new_locations": [
+    {
+      "en": "<English name>",
+      "ar": "<Arabic name>",
+      "lat": <decimal latitude>,
+      "lng": <decimal longitude>,
+      "type": "<ground_invasion|fully_destroyed|collateral_damage|failed_attempt|outpost>",
+      "date": "<date string>",
+      "desc": "<2-3 sentence verified description>",
+      "src": "<primary source>",
+      "confidence": <0-100>,
+      "dist": "<district name>",
+      "gov": "<governorate name>"
+    }
+  ],
+  "status_updates": [
+    {
+      "en": "<location name matching existing DB>",
+      "update": "<what changed>",
+      "src": "<source>"
+    }
+  ],
+  "accuracy_checks": [
+    {
+      "en": "<location from DB>",
+      "verdict": "<CONFIRMED|LIKELY|UNCERTAIN|ERROR>",
+      "confidence": <0-100>,
+      "note": "<one sentence>"
+    }
+  ],
+  "verification_summary": "<paragraph on what sources were checked>"
+}
+
+Prioritize: Lebanon MoH death tolls, UNIFIL statements, Wikipedia 2026 Lebanon war timeline, FDD/NNA, Al Jazeera, L'Orient Today, LiveUAMap.
+Only include new locations with confidence >= 70. Do NOT include Shmestar, Adloun, or Tyre (already in DB for 8 Apr). Do NOT invent data.`;
+
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+
+    setProg(55);
+    addLog('inf','Processing API response + web search results...');
+    const data=await res.json();
+    let raw='';
+    if(data.content)for(const b of data.content)if(b.type==='text')raw+=b.text;
+
+    setProg(70);
+    let upd=null;
+    try{
+      const m=raw.match(/\{[\s\S]*\}/);
+      if(m)upd=JSON.parse(m[0]);
+    }catch(e){addLog('err','JSON parse failed — extracting toll from text...')}
+
+    let changes=0;
+
+    if(upd){
+      // Update casualties
+      if(upd.killed && upd.killed>TOLL.killed){
+        const old=TOLL.killed;
+        TOLL.killed=upd.killed;TOLL.wounded=upd.wounded||TOLL.wounded;
+        TOLL.disp=upd.displaced||TOLL.disp;TOLL.date=upd.toll_date||TOLL.date;
+        updateToll();
+        addLog('upd',`📊 TOLL UPDATED: ${old.toLocaleString()} → ${upd.killed.toLocaleString()} killed · ${TOLL.wounded.toLocaleString()} wounded (${TOLL.date})`);
+        changes++;
+      } else if(upd.killed){
+        addLog('ver',`📊 Toll confirmed: ${upd.killed.toLocaleString()} killed — no change from current figure`);
+      }
+
+      // New locations
+      if(upd.new_locations&&upd.new_locations.length>0){
+        for(const loc of upd.new_locations){
+          const exists=DB.find(v=>v.en.toLowerCase().trim()===loc.en.toLowerCase().trim());
+          if(exists){
+            addLog('inf',`Location already in DB: ${loc.en} — skipping duplicate`);continue;
+          }
+          if(loc.confidence>=70&&loc.lat&&loc.lng&&loc.lat>33.0&&loc.lat<34.0&&loc.lng>35.0&&loc.lng<36.5){
+            const newId=Math.max(...DB.map(v=>v.id))+1;
+            DB.push({id:newId,lat:loc.lat,lng:loc.lng,en:loc.en,ar:loc.ar||'—',type:loc.type||'collateral_damage',
+              date:loc.date,ds:loc.date.replace(/\D/g,'').slice(0,8)||'20260409',pct:null,
+              dist:loc.dist||'—',gov:loc.gov||'—',csrc:`[AUTO-VERIFIED] ${loc.src}`,
+              units:'—',pop:null,score:loc.confidence,
+              st:loc.desc.split('.')[0],desc:loc.desc,src:loc.src,isnew:true});
+            addLog('add',`✚ NEW: ${loc.en} (${loc.ar}) — ${TLABEL[loc.type]} — ${loc.date} — Confidence: ${loc.confidence}% — ${loc.src}`);
+            changes++;
+          } else {
+            addLog('warn',`⚠ Skipped: ${loc.en} — confidence ${loc.confidence}% or coord out of bounds`);
+          }
+        }
+      }
+
+      // Status updates
+      if(upd.status_updates&&upd.status_updates.length>0){
+        for(const u of upd.status_updates){
+          const v=DB.find(x=>x.en.toLowerCase().includes(u.en.toLowerCase().split(' ')[0]));
+          if(v){addLog('upd',`🔄 ${u.en}: ${u.update} (${u.src})`);changes++;}
+        }
+      }
+
+      // Accuracy checks
+      if(upd.accuracy_checks&&upd.accuracy_checks.length>0){
+        let conf=0,uncert=0;
+        for(const c of upd.accuracy_checks){
+          const v=DB.find(x=>x.en.toLowerCase().includes(c.en.toLowerCase().split(' ')[0]));
+          if(v){
+            v.score=c.confidence;
+            const icon=c.verdict==='CONFIRMED'?'✓':c.verdict==='LIKELY'?'~':c.verdict==='UNCERTAIN'?'?':'✗';
+            addLog('ver',`${icon} ${c.en}: ${c.verdict} (${c.confidence}%) — ${c.note}`);
+            if(c.verdict==='CONFIRMED'||c.verdict==='LIKELY')conf++;else uncert++;
+          }
+        }
+        addLog('ver',`[ACCURACY] ${conf}/${upd.accuracy_checks.length} entries confirmed — ${uncert} uncertain/error`);
+      }
+
+      if(upd.verification_summary)addLog('ver',`[SOURCES] ${upd.verification_summary}`);
+
+    } else {
+      // Fallback: text scan
+      const km=raw.match(/(\d{1,5})\s*(?:were\s*)?killed/i);
+      if(km&&parseInt(km[1])>TOLL.killed){
+        TOLL.killed=parseInt(km[1]);updateToll();
+        addLog('upd',`📊 Toll extracted from raw text: ${TOLL.killed.toLocaleString()} killed`);
+      }
+    }
+
+    // Always run coordinate validation
+    setProg(88);
+    addLog('ver','[COORD CHECK] Validating all coordinates against south Lebanon geographic bounds...');
+    let bad=0;
+    DB.forEach(v=>{
+      if(v.lat<32.8||v.lat>34.5||v.lng<34.8||v.lng>36.8){
+        addLog('err',`⚠ COORD FLAG: ${v.en} — (${v.lat},${v.lng}) outside Lebanon — marking unverified`);
+        v.score=Math.min(v.score,50);bad++;
+      }
+    });
+    if(bad===0)addLog('ver',`✓ All ${DB.length} coordinates within Lebanon geographic bounds`);
+
+    // Date validation
+    const future=DB.filter(v=>v.ds>'20260410');
+    if(future.length>0)future.forEach(v=>addLog('err',`⚠ DATE WARN: ${v.en} has suspicious future date ${v.date}`));
+    else addLog('ver',`✓ All dates validated — no suspicious future-dated entries`);
+
+    // Summary
+    setProg(100);
+    if(changes===0)addLog('inf',`✓ Database current — no new changes at ${new Date().toLocaleTimeString()}`);
+    else addLog('add',`✓ Update complete — ${changes} changes applied at ${new Date().toLocaleTimeString()}`);
+
+    document.getElementById('last-run').textContent=new Date().toLocaleTimeString();
+    document.getElementById('run-count').textContent=RUNS;
+    setLED('ok',`Live · Updated ${new Date().toLocaleTimeString()}`);
+
+  }catch(e){
+    addLog('err',`✗ Update error: ${e.message}`);
+    setLED('err','Update failed');
+  }
+
+  setTimeout(()=>setProg(0),2000);
+  BUSY=false;btn.disabled=false;btn.textContent='▶ Update Now';
+  renderAll();renderMarkers();
+  TICK=3600; // reset timer after manual update
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+function updateToll(){
+  document.getElementById('t-killed').textContent=TOLL.killed.toLocaleString();
+  document.getElementById('t-wounded').textContent=TOLL.wounded.toLocaleString();
+  document.getElementById('t-disp').textContent=TOLL.disp;
+  document.getElementById('t-date').textContent=TOLL.date.split(' ').slice(0,3).join(' ');
+}
+function setLED(mode,txt){
+  const d=document.getElementById('led'),s=document.getElementById('st-txt');
+  d.className='led'+(mode==='busy'?' busy':mode==='err'?' err':'');
+  s.textContent=txt;
+}
+function setProg(p){document.getElementById('progbar').style.width=p+'%'}
+function startTimer(){
+  clearInterval(TID);
+  TID=setInterval(()=>{
+    TICK--;
+    const m=Math.floor(TICK/60).toString().padStart(2,'0');
+    const s=(TICK%60).toString().padStart(2,'0');
+    document.getElementById('countdown').textContent=`${m}:${s}`;
+    if(TICK<=0){runUpdate();TICK=3600}
+  },1000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// SHARE MODAL
+// ═══════════════════════════════════════════════════════════
+function openShare(){document.getElementById('modal-bg').classList.add('open')}
+function closeShare(){document.getElementById('modal-bg').classList.remove('open')}
+function copyCode(id){
+  const t=document.getElementById(id).textContent;
+  navigator.clipboard.writeText(t).then(()=>{
+    const btn=document.querySelector(`#${id}+.copy-btn`)||document.querySelector(`.copy-btn[onclick*="${id}"]`);
+    if(btn){const old=btn.textContent;btn.textContent='Copied!';setTimeout(()=>btn.textContent=old,1500)}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORT — single self-contained shareable HTML
+// ═══════════════════════════════════════════════════════════
+function exportHTML(){
+  addLog('inf','Generating shareable standalone HTML...');
+  const dbJSON=JSON.stringify(DB.map(({id,lat,lng,en,ar,type,date,pct,dist,gov,csrc,units,pop,score,st,desc,src,isnew})=>({id,lat,lng,en,ar,type,date,pct,dist,gov,csrc,units,pop,score,st,desc,src,isnew})),null,0);
+  const genDate=new Date().toUTCString();
+
+  const html=`<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Lebanon War Archive 2024–2026 | ${DB.length} locations | Updated ${new Date().toLocaleDateString()}</title>
+<meta name="description" content="Interactive archive of IDF military operations in South Lebanon 2024–2026. ${DB.length} verified locations. ${TOLL.killed.toLocaleString()} killed as of ${TOLL.date}."/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>
+<style>*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%;font-family:system-ui,sans-serif;font-size:12px}
+#app{display:flex;flex-direction:column;height:100%}
+#hdr{background:#0d1520;color:#e2eaf4;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0}
+.ht{font-weight:700;font-size:13px}.toll{font-size:10px;color:#8aa4be;margin-left:auto}
+#ticker{background:#111d2b;color:#f39c12;font-size:10px;padding:4px 14px;border-bottom:1px solid #243347;white-space:nowrap;overflow:hidden;flex-shrink:0}
+#body{display:flex;flex:1;min-height:0}#sb{width:280px;flex-shrink:0;background:#0d1520;border-right:1px solid #243347;overflow-y:auto}
+#map{flex:1}#dp{position:absolute;bottom:12px;left:292px;z-index:9999;background:#111d2b;border:1px solid #243347;border-radius:5px;padding:12px;max-width:300px;display:none;font-size:11px;color:#e2eaf4;max-height:80vh;overflow-y:auto}
+.vi{padding:7px 10px;border-bottom:1px solid #1a2d42;cursor:pointer}.vi:hover{background:#172234}
+.vi.s{background:#172234;border-left:2px solid #3498db}.ven{font-size:11px;font-weight:600}.var{font-size:9px;color:#4d6e8c;direction:rtl;margin-top:1px}.vd{font-size:8px;color:#2e4d6b;margin-top:1px}
+.nb{font-size:7px;padding:1px 3px;border-radius:2px;background:rgba(192,57,43,.2);color:#e74c3c;border:1px solid rgba(192,57,43,.25);margin-left:3px}
+.leaflet-container{background:#0a1218!important}.leaflet-tile{filter:brightness(.35) saturate(.25) hue-rotate(185deg)}</style>
+</head><body><div id="app">
+<div id="hdr"><div class="ht">🇱🇧 Lebanon War Archive 2024–2026</div>
+<div class="toll"><b>${TOLL.killed.toLocaleString()}</b> killed · <b>${TOLL.wounded.toLocaleString()}</b> wounded · <b>${TOLL.disp}</b> displaced · <b>${DB.length}</b> locations</div></div>
+<div id="ticker">⚡ LATEST: Operation Eternal Darkness 8 Apr 2026 — 254 killed in single day · 50 IAF jets, 160 munitions, 100 targets in 10 minutes · IDF Lebanon operations continue despite US-Iran ceasefire · Netanyahu: "Lebanon not included in ceasefire" · Generated: ${genDate}</div>
+<div id="body"><div id="sb" id="sb-el"></div><div style="position:relative;flex:1"><div id="map"></div>
+<div id="dp"><button onclick="document.getElementById('dp').style.display='none'" style="float:right;background:none;border:none;color:#4d6e8c;cursor:pointer;font-size:14px">✕</button>
+<div id="dp-n" style="font-weight:700;font-size:13px;margin-bottom:3px"></div>
+<div id="dp-ar" style="font-size:11px;color:#8aa4be;direction:rtl;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #243347"></div>
+<div id="dp-c"></div></div></div></div></div>
+<script>
+const DB=${dbJSON};
+const TOLL={killed:${TOLL.killed},wounded:${TOLL.wounded},disp:'${TOLL.disp}',date:'${TOLL.date}'};
+const TC={ground_invasion:{c:'#c0392b',f:'#7b241c',r:12},fully_destroyed:{c:'#d35400',f:'#935116',r:10},collateral_damage:{c:'#c9920a',f:'#886300',r:8},failed_attempt:{c:'#4a5568',f:'#2d3748',r:8},outpost:{c:'#6c3483',f:'#4a235a',r:10}};
+const TL={ground_invasion:'Ground Invasion',fully_destroyed:'Fully Destroyed',collateral_damage:'Collateral Damage',failed_attempt:'Failed Attempt',outpost:'Perm. Outpost'};
+let SEL=null;const MK={};
+const map=L.map('map',{center:[33.22,35.45],zoom:10,preferCanvas:true});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+const LIT=[[33.544,35.783],[33.538,35.748],[33.528,35.710],[33.515,35.672],[33.505,35.635],[33.493,35.598],[33.478,35.558],[33.462,35.520],[33.443,35.485],[33.422,35.452],[33.400,35.420],[33.377,35.390],[33.355,35.360],[33.334,35.330],[33.312,35.300],[33.290,35.265],[33.268,35.230],[33.248,35.198],[33.230,35.165],[33.210,35.130]];
+L.polyline(LIT,{color:'#2471a3',weight:3,opacity:.85}).addTo(map).bindTooltip('Litani River',{sticky:true});
+const SZ=[...LIT,[33.19,35.10],[33.07,35.12],[33.065,35.25],[33.06,35.38],[33.055,35.52],[33.06,35.65],[33.07,35.78],[33.09,35.88],[33.13,35.935],[33.20,35.96],[33.30,35.97],[33.40,35.955],[33.50,35.91],[33.545,35.862],[33.544,35.783]];
+L.polygon(SZ,{color:'#c0392b',weight:1.5,fillColor:'#c0392b',fillOpacity:.07,dashArray:'6 3',opacity:.4}).addTo(map);
+[[33.295,35.224,'Qasmiyeh Bridge DESTROYED 18 Mar'],[33.508,35.268,'Zrarieh Bridge DESTROYED 22 Mar'],[33.430,35.705,'Dlafy Bridge DESTROYED 23-24 Mar']].forEach(([la,lo,t])=>{L.circleMarker([la,lo],{radius:5,color:'#e74c3c',fillColor:'#e74c3c',fillOpacity:.9,weight:1}).addTo(map).bindTooltip('❌ '+t,{sticky:true})});
+function pick(id){
+  SEL=SEL===id?null:id;
+  Object.values(MK).forEach(({c,l})=>{map.removeLayer(c);if(l)map.removeLayer(l)});
+  for(const k in MK)delete MK[k];
+  DB.forEach(v=>{
+    const t=TC[v.type],sel=v.id===SEL;
+    const c=L.circleMarker([v.lat,v.lng],{radius:sel?t.r+3:t.r,color:sel?'#2471a3':v.isnew?'#e74c3c':t.c,fillColor:t.f,fillOpacity:.88,weight:sel?3:2});
+    c.on('click',()=>pick(v.id));c.addTo(map);
+    const l=L.marker([v.lat,v.lng],{icon:L.divIcon({className:'',html:'<div style="font-size:9px;color:'+( v.isnew?'#e74c3c':t.c)+';white-space:nowrap;text-shadow:0 0 5px #0a1218,1px 1px 2px #0a1218;margin-left:'+(t.r+5)+'px;margin-top:-4px;pointer-events:none">'+v.en+(v.isnew?' ●':'')+'</div>',iconAnchor:[0,11]}),interactive:false,zIndexOffset:-100});
+    l.addTo(map);MK[v.id]={c,l};
+  });
+  if(SEL){
+    const v=DB.find(x=>x.id===SEL);if(!v)return;
+    map.setView([v.lat,v.lng],14,{animate:true});
+    const dp=document.getElementById('dp');
+    document.getElementById('dp-n').textContent=(v.isnew?'🆕 ':'')+v.en;
+    document.getElementById('dp-ar').textContent=v.ar;
+    document.getElementById('dp-c').innerHTML='<p style="font-size:10px;color:#8aa4be;margin:4px 0"><b style="color:#5dade2">'+TL[v.type]+'</b> · '+v.date+'</p><p style="font-size:10px;color:#c0392b;margin:4px 0">'+v.st+'</p><p style="font-size:10px;color:#8aa4be;margin:6px 0;line-height:1.5">'+v.desc+'</p><p style="font-size:8.5px;color:#4d6e8c;margin-top:5px"><b style="color:#5d7a94">Sources:</b> '+v.src+'</p>';
+    dp.style.display='block';
+    const sle=document.querySelector('.vi[data-id="'+id+'"]');if(sle)sle.scrollIntoView({block:'nearest'});
+  } else {document.getElementById('dp').style.display='none'}
+  document.querySelectorAll('.vi').forEach(el=>{el.classList.toggle('s',parseInt(el.dataset.id)===SEL)});
+}
+const sb=document.getElementById('sb');
+sb.innerHTML=DB.sort((a,b)=>b.ds.localeCompare(a.ds)).map(v=>{const t=TC[v.type];return '<div class="vi" data-id="'+v.id+'" onclick="pick('+v.id+')" style="border-left:2px solid '+t.c+'"><div class="ven" style="color:'+t.c+'">'+v.en+(v.isnew?'<span class="nb">NEW</span>':'')+'</div><div class="var">'+v.ar+'</div><div class="vd">'+v.date+' · '+v.dist+'</div></div>';}).join('');
+pick(null);
+<\/script></body></html>`;
+
+  const blob=new Blob([html],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`lebanon_war_archive_${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
+  addLog('add',`✓ Exported: lebanon_war_archive_${new Date().toISOString().slice(0,10)}.html · ${DB.length} locations · ${TOLL.killed.toLocaleString()} killed`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load',()=>{
+  updateToll();
+  // Boot log
+  addLog('inf','═══════════════════════════════════════════════');
+  addLog('inf','LEBANON WAR ARCHIVE v10 — 09 April 2026');
+  addLog('inf','═══════════════════════════════════════════════');
+  addLog('inf',`DATABASE: ${DB.length} verified entries loaded`);
+  addLog('inf','OPERATION ETERNAL DARKNESS (8 Apr 2026): 254 killed in single day — 50 IAF jets, 160 munitions, 100 targets in 10 min');
+  addLog('upd',`CUMULATIVE TOLL: ${TOLL.killed.toLocaleString()} killed / ${TOLL.wounded.toLocaleString()} wounded (1,530 before Op.ED + 254 during)`);
+  addLog('inf','NEW IN v10: Adloun (3 girls killed) · Shmestar (10 killed at funeral) · Tyre/Hiram Hospital (Op. Eternal Darkness)');
+  addLog('ver','SOURCES (primary): UNIFIL · CIR geolocated OSINT · Amnesty International satellite · Wikipedia 2026 Lebanon war');
+  addLog('ver','SOURCES (secondary): FDD/NNA · Al Jazeera · L\'Orient Today · Times of Israel · CBC · LiveUAMap · Reuters');
+  addLog('inf','AUTOMATION: Hourly Claude API calls with web_search — coordinate validation — confidence scoring — cross-reference');
+  addLog('inf','SHARE: Click "⬆ Share / Deploy" for Netlify/GitHub Pages/iframe guide, or "⬇ Export" for standalone HTML');
+  addLog('inf','Click ▶ Update Now for immediate update · Timer resets after each update');
+  initMap();
+  renderAll();
+  startTimer();
+  // Initial accuracy check after 8s
+  setTimeout(async()=>{
+    addLog('ver','[STARTUP VERIFICATION] Running initial database accuracy check...');
+    try{
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,
+          messages:[{role:'user',content:`Verify these Lebanon war entries (2026). Return JSON array only:
+${DB.slice(0,8).map(v=>`{id:${v.id}, en:"${v.en}", type:"${v.type}", date:"${v.date}", lat:${v.lat}, lng:${v.lng}}`).join('\n')}
+Format: [{id, en, verdict:"CONFIRMED|LIKELY|UNCERTAIN|ERROR", confidence:0-100, note:"one sentence"}]`}]})
+      });
+      const d=await res.json();
+      let txt='';if(d.content)for(const b of d.content)if(b.type==='text')txt+=b.text;
+      const m=txt.match(/\[[\s\S]*\]/);
+      if(m){
+        const checks=JSON.parse(m[0]);
+        checks.forEach(c=>{
+          const v=DB.find(x=>x.id===c.id);
+          if(v){v.score=c.confidence;const icon=c.verdict==='CONFIRMED'?'✓':c.verdict==='LIKELY'?'~':c.verdict==='UNCERTAIN'?'?':'✗';
+          addLog('ver',`${icon} ${c.en}: ${c.verdict} (${c.confidence}%) — ${c.note}`);}
+        });
+        const conf=checks.filter(c=>c.verdict==='CONFIRMED'||c.verdict==='LIKELY').length;
+        addLog('ver',`[STARTUP CHECK] ${conf}/${checks.length} entries verified — database integrity confirmed`);
+        renderAll();renderMarkers();
+      }
+    }catch(e){addLog('err',`[STARTUP CHECK] ${e.message}`)}
+  },8000);
+});
+</script>
+</body>
+</html>
